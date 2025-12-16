@@ -417,7 +417,7 @@ def analyze_token_usage(events):
         'total_cache_read': 0,
         'total_cost_cents': 0,
         'model_costs': defaultdict(float),
-        'model_tokens': defaultdict(lambda: {'input': 0, 'output': 0}),
+        'model_tokens': defaultdict(lambda: {'input': 0, 'output': 0, 'cache_write': 0, 'cache_read': 0}),
         'event_count': len(events)
     }
     
@@ -425,11 +425,11 @@ def analyze_token_usage(events):
         token_usage = event.get('tokenUsage', {})
         model = event.get('model', 'unknown')
         
-        # API returns values in thousands, multiply by 1000 to get actual count
-        input_tokens = token_usage.get('inputTokens', 0) * 1000
-        output_tokens = token_usage.get('outputTokens', 0) * 1000
-        cache_write = token_usage.get('cacheWriteTokens', 0) * 1000
-        cache_read = token_usage.get('cacheReadTokens', 0) * 1000
+        # Token values are raw tokens (not thousands)
+        input_tokens = token_usage.get('inputTokens', 0)
+        output_tokens = token_usage.get('outputTokens', 0)
+        cache_write = token_usage.get('cacheWriteTokens', 0)
+        cache_read = token_usage.get('cacheReadTokens', 0)
         cost_cents = token_usage.get('totalCents', 0)
         
         stats['total_input_tokens'] += input_tokens
@@ -441,6 +441,8 @@ def analyze_token_usage(events):
         stats['model_costs'][model] += cost_cents
         stats['model_tokens'][model]['input'] += input_tokens
         stats['model_tokens'][model]['output'] += output_tokens
+        stats['model_tokens'][model]['cache_write'] += cache_write
+        stats['model_tokens'][model]['cache_read'] += cache_read
     
     return stats
 
@@ -1258,7 +1260,9 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         print(f"  {DIM}{'─' * 60}{RESET}\n")
         time.sleep(0.25)
         
-        total_tokens = token_stats['total_input_tokens'] + token_stats['total_output_tokens']
+        # Total tokens includes input + output + cache (matches Cursor dashboard)
+        total_tokens = (token_stats['total_input_tokens'] + token_stats['total_output_tokens'] + 
+                       token_stats['total_cache_read'] + token_stats['total_cache_write'])
         cache_total = token_stats['total_cache_read'] + token_stats['total_cache_write']
         cache_hit_rate = (token_stats['total_cache_read'] / cache_total * 100) if cache_total > 0 else 0
         cost_dollars = token_stats['total_cost_cents'] / 100
@@ -1316,10 +1320,11 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         d = stats['most_productive_day']['date']
         peak_day_str = f"{d.strftime('%b %d')} ({stats['most_productive_day']['lines']:,})"
     
-    # Token stats
+    # Token stats (includes cache tokens to match Cursor dashboard)
     total_tokens_val = "N/A"
     if token_stats:
-        total_tok = token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0)
+        total_tok = (token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0) +
+                    token_stats.get('total_cache_read', 0) + token_stats.get('total_cache_write', 0))
         total_tokens_val = format_large_number(total_tok, " tokens")
     
     # Pre-format all values
@@ -1334,11 +1339,6 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
     tab_accepted = stats.get('total_tabs_accepted', 0)
     tab_rate = (tab_accepted / tab_shown * 100) if tab_shown > 0 else 0
     tab_val = f"{tab_accepted:,} ({tab_rate:.0f}%)"
-    
-    # Apollo missions calculation
-    APOLLO_11_LINES = 145000
-    apollo_missions = stats['accepted_lines_added'] / APOLLO_11_LINES
-    apollo_val = f"{apollo_missions:.1f}x 🚀"
     
     # Sleek summary card with animation
     W = 52  # inner width (must be even for centering)
@@ -1387,7 +1387,6 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
     animate_line(make_stat_row("Tabs Accepted", tab_val), 0.05)
     animate_line(make_stat_row("Active Days", active_val), 0.05)
     animate_line(make_stat_row("Longest Streak", streak_val), 0.05)
-    animate_line(make_stat_row("Moon Missions", apollo_val), 0.05)
     
     animate_line(f"  {CYAN}│{' ' * W}│{RESET}", 0.02)
     animate_line(f"  {CYAN}├{'─' * W}┤{RESET}", 0.03)
@@ -1464,7 +1463,8 @@ def generate_terminal_image(wrapped_data):
     
     total_tokens = "N/A"
     if token_stats:
-        total_tok = token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0)
+        total_tok = (token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0) +
+                    token_stats.get('total_cache_read', 0) + token_stats.get('total_cache_write', 0))
         total_tokens = format_large_number(total_tok, " tokens")
     
     tab_shown = stats.get('total_tabs_shown', 0)
@@ -1610,11 +1610,6 @@ def generate_terminal_image(wrapped_data):
     current_y += section_spacing
     
     # === STATS SECTION ===
-    # Apollo missions calculation
-    APOLLO_11_LINES = 145000
-    apollo_missions = stats['accepted_lines_added'] / APOLLO_11_LINES
-    apollo_val = f"{apollo_missions:.1f}x Apollo 11"
-    
     stats_data = [
         ("Lines Accepted", f"{stats['accepted_lines_added']:,}"),
         ("Agent Requests", f"{stats['total_agent_requests']:,}"),
@@ -1622,7 +1617,6 @@ def generate_terminal_image(wrapped_data):
         ("Tabs Accepted", tabs_val),
         ("Active Days", f"{stats['active_days']} / {total_days}"),
         ("Longest Streak", f"{stats['streak_longest']} days"),
-        ("Moon Missions", apollo_val),
     ]
     
     def draw_stat_row(y, label, value, highlight=False):
@@ -1721,10 +1715,11 @@ def generate_ascii_card(wrapped_data):
     
     power_day = day_full[best_day] if best_day else "N/A"
     
-    # Token stats
+    # Token stats (includes cache tokens to match Cursor dashboard)
     total_tokens = "N/A"
     if token_stats:
-        total_tok = token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0)
+        total_tok = (token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0) +
+                    token_stats.get('total_cache_read', 0) + token_stats.get('total_cache_write', 0))
         total_tokens = format_large_number(total_tok, " tokens")
     
     # Tab stats
@@ -1733,10 +1728,6 @@ def generate_ascii_card(wrapped_data):
     tab_rate = (tab_accepted / tab_shown * 100) if tab_shown > 0 else 0
     tabs_val = f"{tab_accepted:,} ({tab_rate:.0f}%)"
     
-    # Apollo missions calculation
-    APOLLO_11_LINES = 145000
-    apollo_missions = stats['accepted_lines_added'] / APOLLO_11_LINES
-    
     # Pre-format values - all padded to exactly 15 chars
     lines_val = f"{stats['accepted_lines_added']:,}".rjust(15)
     requests_val = f"{stats['total_agent_requests']:,}".rjust(15)
@@ -1744,7 +1735,6 @@ def generate_ascii_card(wrapped_data):
     tabs_formatted = tabs_val.rjust(15)
     active_val = f"{stats['active_days']} / {total_days}".rjust(15)
     streak_val = f"{stats['streak_longest']} days".rjust(15)
-    apollo_val = f"{apollo_missions:.1f}x Apollo 11".rjust(15)
     top_model_val = top_model.rjust(18)
     power_day_val = power_day.rjust(18)
     
@@ -1764,7 +1754,6 @@ def generate_ascii_card(wrapped_data):
     lines.append("║" + f"  Tabs Accepted      {tabs_formatted}      ".ljust(W) + "║")
     lines.append("║" + f"  Active Days        {active_val}      ".ljust(W) + "║")
     lines.append("║" + f"  Longest Streak     {streak_val}      ".ljust(W) + "║")
-    lines.append("║" + f"  Moon Missions      {apollo_val}      ".ljust(W) + "║")
     lines.append("║" + " " * W + "║")
     lines.append("╠" + "═" * W + "╣")
     lines.append("║" + " " * W + "║")

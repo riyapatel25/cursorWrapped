@@ -417,7 +417,7 @@ def analyze_token_usage(events):
         'total_cache_read': 0,
         'total_cost_cents': 0,
         'model_costs': defaultdict(float),
-        'model_tokens': defaultdict(lambda: {'input': 0, 'output': 0}),
+        'model_tokens': defaultdict(lambda: {'input': 0, 'output': 0, 'cache_write': 0, 'cache_read': 0}),
         'event_count': len(events)
     }
     
@@ -425,11 +425,11 @@ def analyze_token_usage(events):
         token_usage = event.get('tokenUsage', {})
         model = event.get('model', 'unknown')
         
-        # API returns values in thousands, multiply by 1000 to get actual count
-        input_tokens = token_usage.get('inputTokens', 0) * 1000
-        output_tokens = token_usage.get('outputTokens', 0) * 1000
-        cache_write = token_usage.get('cacheWriteTokens', 0) * 1000
-        cache_read = token_usage.get('cacheReadTokens', 0) * 1000
+        # Token values are raw tokens (not thousands)
+        input_tokens = token_usage.get('inputTokens', 0)
+        output_tokens = token_usage.get('outputTokens', 0)
+        cache_write = token_usage.get('cacheWriteTokens', 0)
+        cache_read = token_usage.get('cacheReadTokens', 0)
         cost_cents = token_usage.get('totalCents', 0)
         
         stats['total_input_tokens'] += input_tokens
@@ -441,6 +441,8 @@ def analyze_token_usage(events):
         stats['model_costs'][model] += cost_cents
         stats['model_tokens'][model]['input'] += input_tokens
         stats['model_tokens'][model]['output'] += output_tokens
+        stats['model_tokens'][model]['cache_write'] += cache_write
+        stats['model_tokens'][model]['cache_read'] += cache_read
     
     return stats
 
@@ -1258,7 +1260,9 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         print(f"  {DIM}{'─' * 60}{RESET}\n")
         time.sleep(0.25)
         
-        total_tokens = token_stats['total_input_tokens'] + token_stats['total_output_tokens']
+        # Total tokens includes input + output + cache (matches Cursor dashboard)
+        total_tokens = (token_stats['total_input_tokens'] + token_stats['total_output_tokens'] + 
+                       token_stats['total_cache_read'] + token_stats['total_cache_write'])
         cache_total = token_stats['total_cache_read'] + token_stats['total_cache_write']
         cache_hit_rate = (token_stats['total_cache_read'] / cache_total * 100) if cache_total > 0 else 0
         cost_dollars = token_stats['total_cost_cents'] / 100
@@ -1316,10 +1320,11 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         d = stats['most_productive_day']['date']
         peak_day_str = f"{d.strftime('%b %d')} ({stats['most_productive_day']['lines']:,})"
     
-    # Token stats
+    # Token stats (includes cache tokens to match Cursor dashboard)
     total_tokens_val = "N/A"
     if token_stats:
-        total_tok = token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0)
+        total_tok = (token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0) +
+                    token_stats.get('total_cache_read', 0) + token_stats.get('total_cache_write', 0))
         total_tokens_val = format_large_number(total_tok, " tokens")
     
     # Pre-format all values
@@ -1458,7 +1463,8 @@ def generate_terminal_image(wrapped_data):
     
     total_tokens = "N/A"
     if token_stats:
-        total_tok = token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0)
+        total_tok = (token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0) +
+                    token_stats.get('total_cache_read', 0) + token_stats.get('total_cache_write', 0))
         total_tokens = format_large_number(total_tok, " tokens")
     
     tab_shown = stats.get('total_tabs_shown', 0)
@@ -1709,10 +1715,11 @@ def generate_ascii_card(wrapped_data):
     
     power_day = day_full[best_day] if best_day else "N/A"
     
-    # Token stats
+    # Token stats (includes cache tokens to match Cursor dashboard)
     total_tokens = "N/A"
     if token_stats:
-        total_tok = token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0)
+        total_tok = (token_stats.get('total_input_tokens', 0) + token_stats.get('total_output_tokens', 0) +
+                    token_stats.get('total_cache_read', 0) + token_stats.get('total_cache_write', 0))
         total_tokens = format_large_number(total_tok, " tokens")
     
     # Tab stats
