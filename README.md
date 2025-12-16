@@ -15,7 +15,7 @@ uvx cursor-wrapped
 
 
 1. Opens a browser window for you to sign in to your Cursor account
-2. Fetches your usage data from Cursor's API
+2. Fetches your usage data from Cursor
 3. Displays an animated summary of your year
 4. Option to share summary card of stats on X or iMessage!
 

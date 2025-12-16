@@ -40,15 +40,15 @@ ASCII_DIGITS = {
     '+': ['   ', ' █ ', '███', ' █ ', '   '],
     '%': ['█ █', '  █', ' █ ', '█  ', '█ █'],
     ' ': ['   ', '   ', '   ', '   ', '   '],
-    # K - diagonal arm shape
-    'k': ['█ █', '██ ', '█  ', '██ ', '█ █'],
-    'K': ['█ █', '██ ', '█  ', '██ ', '█ █'],
-    # M - shows the V-peak shape in the middle
-    'M': ['█ █', '███', '███', '█ █', '█ █'],
-    'm': ['█ █', '███', '███', '█ █', '█ █'],
-    # B - bumps on right side
-    'B': ['██ ', '█ █', '██ ', '█ █', '██ '],
-    'b': ['██ ', '█ █', '██ ', '█ █', '██ '],
+    # K - 5-wide for better recognition
+    'k': ['█  █', '█ █ ', '██  ', '█ █ ', '█  █'],
+    'K': ['█  █', '█ █ ', '██  ', '█ █ ', '█  █'],
+    # M - 5-wide for clear M shape
+    'M': ['█   █', '██ ██', '█ █ █', '█   █', '█   █'],
+    'm': ['█   █', '██ ██', '█ █ █', '█   █', '█   █'],
+    # B - 5-wide with clear bumps
+    'B': ['████ ', '█   █', '████ ', '█   █', '████ '],
+    'b': ['████ ', '█   █', '████ ', '█   █', '████ '],
 }
 
 def number_to_ascii(num_str, color="\033[97m"):
@@ -58,6 +58,7 @@ def number_to_ascii(num_str, color="\033[97m"):
     for char in str(num_str):
         if char in ASCII_DIGITS:
             digit = ASCII_DIGITS[char]
+            char_width = len(digit[0])  # Get actual width of this character
             for i in range(5):
                 lines[i] += color + digit[i] + reset + ' '
         else:
@@ -70,7 +71,8 @@ def get_ascii_width(num_str):
     width = 0
     for char in str(num_str):
         if char in ASCII_DIGITS:
-            width += 4  # 3 chars + 1 space
+            char_width = len(ASCII_DIGITS[char][0])  # Get actual width
+            width += char_width + 1  # char width + 1 space
         else:
             width += 4
     return width
@@ -1144,17 +1146,17 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         
         # Apollo 11 comparison if > 145,000 lines
         APOLLO_11_LINES = 145000
-        if lines_written > APOLLO_11_LINES:
-            times_more = lines_written / APOLLO_11_LINES
-            apollo_msg = f"That's {times_more:.1f}x more code than Apollo 11's guidance system! 🚀"
-            print(f"    ", end="")
-            for char in apollo_msg:
-                color = YELLOW if char.isdigit() or char == '.' or char == 'x' else DIM
-                sys.stdout.write(f"{color}{char}{RESET}")
-                sys.stdout.flush()
-                time.sleep(0.012)
-            print()
-            time.sleep(0.3)
+
+        times_more = lines_written / APOLLO_11_LINES
+        apollo_msg = f"That's {times_more:.1f}x more code than Apollo 11's guidance system! 🚀"
+        print(f"    ", end="")
+        for char in apollo_msg:
+            color = YELLOW if char.isdigit() or char == '.' or char == 'x' else DIM
+            sys.stdout.write(f"{color}{char}{RESET}")
+            sys.stdout.flush()
+            time.sleep(0.012)
+        print()
+        time.sleep(0.3)
         
         print()
         
