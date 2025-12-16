@@ -1871,14 +1871,14 @@ def show_menu(wrapped_data):
     while True:
         print(f"  {CYAN}{BOLD}What would you like to do?{RESET}")
         print()
-        print(f"  {WHITE}[1]{RESET} {DIM}Replay Wrapped{RESET}")
-        print(f"  {WHITE}[2]{RESET} {DIM}Share via iMessage{RESET} 💬")
-        print(f"  {WHITE}[3]{RESET} {DIM}Share on {RESET}𝕏")
-        print(f"  {WHITE}[4]{RESET} {DIM}Exit{RESET}")
+        print(f"  {WHITE}[1]{RESET} Replay Wrapped 🔄")
+        print(f"  {WHITE}[2]{RESET} Share via iMessage 💬")
+        print(f"  {WHITE}[3]{RESET} Share on 𝕏")
+        print(f"  {WHITE}[4]{RESET} Exit")
         print()
         
         try:
-            choice = input(f"  {DIM}Enter choice (1-4):{RESET} ").strip()
+            choice = input(f"  {WHITE}Enter choice (1-4):{RESET} ").strip()
         except (KeyboardInterrupt, EOFError):
             print()
             break
@@ -1917,7 +1917,30 @@ def show_menu(wrapped_data):
                             print(f"  {DIM}{'─' * 50}{RESET}")
                             print()
                             
-                            input(f"  {DIM}Press Enter to open Messages...{RESET}")
+                            # Tab prompt to open Messages
+                            print(f"  {CYAN}┌{'─' * 34}┐{RESET}")
+                            print(f"  {CYAN}│{RESET}  {WHITE}{BOLD}⇥  Press Tab to open Messages{RESET}   {CYAN}│{RESET}")
+                            print(f"  {CYAN}└{'─' * 34}┘{RESET}")
+                            sys.stdout.flush()
+                            
+                            # Wait for Tab key
+                            try:
+                                import termios
+                                import tty
+                                fd = sys.stdin.fileno()
+                                old_settings = termios.tcgetattr(fd)
+                                try:
+                                    tty.setraw(fd)
+                                    while True:
+                                        ch = sys.stdin.read(1)
+                                        if ch == '\t' or ch == '\r' or ch == '\n':
+                                            break
+                                        elif ch == '\x03':
+                                            raise KeyboardInterrupt
+                                finally:
+                                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                            except (ImportError, Exception):
+                                input()  # Fallback
                             
                             # Open Messages app on macOS
                             if sys.platform == 'darwin':
@@ -1979,7 +2002,30 @@ def show_menu(wrapped_data):
                             print(f"  {DIM}{'─' * 50}{RESET}")
                             print()
                             
-                            input(f"  {DIM}Press Enter to open X...{RESET}")
+                            # Tab prompt to open X
+                            print(f"  {CYAN}┌{'─' * 34}┐{RESET}")
+                            print(f"  {CYAN}│{RESET}  {WHITE}{BOLD}⇥  Press Tab to open X{RESET}          {CYAN}│{RESET}")
+                            print(f"  {CYAN}└{'─' * 34}┘{RESET}")
+                            sys.stdout.flush()
+                            
+                            # Wait for Tab key
+                            try:
+                                import termios
+                                import tty
+                                fd = sys.stdin.fileno()
+                                old_settings = termios.tcgetattr(fd)
+                                try:
+                                    tty.setraw(fd)
+                                    while True:
+                                        ch = sys.stdin.read(1)
+                                        if ch == '\t' or ch == '\r' or ch == '\n':
+                                            break
+                                        elif ch == '\x03':
+                                            raise KeyboardInterrupt
+                                finally:
+                                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                            except (ImportError, Exception):
+                                input()  # Fallback
                             
                             # Open Twitter with simple tweet text
                             tweet = "here's my cursor 2025 wrapped:\n\n"
@@ -1987,10 +2033,34 @@ def show_menu(wrapped_data):
                             print(f"\n  {GREEN}✓{RESET} X opened! Paste your summary image with Cmd+V 🚀")
                         else:
                             print(f"  {YELLOW}⚠{RESET}  Could not copy image to clipboard")
-                            print(f"  {DIM}Take a screenshot of the summary above instead!{RESET}")
+                            print(f"  {WHITE}Take a screenshot of the summary above instead!{RESET}")
                             print()
                             
-                            input(f"  {DIM}Press Enter to open X...{RESET}")
+                            # Tab prompt to open X
+                            print(f"  {CYAN}┌{'─' * 34}┐{RESET}")
+                            print(f"  {CYAN}│{RESET}  {WHITE}{BOLD}⇥  Press Tab to open X{RESET}          {CYAN}│{RESET}")
+                            print(f"  {CYAN}└{'─' * 34}┘{RESET}")
+                            sys.stdout.flush()
+                            
+                            # Wait for Tab key
+                            try:
+                                import termios
+                                import tty
+                                fd = sys.stdin.fileno()
+                                old_settings = termios.tcgetattr(fd)
+                                try:
+                                    tty.setraw(fd)
+                                    while True:
+                                        ch = sys.stdin.read(1)
+                                        if ch == '\t' or ch == '\r' or ch == '\n':
+                                            break
+                                        elif ch == '\x03':
+                                            raise KeyboardInterrupt
+                                finally:
+                                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                            except (ImportError, Exception):
+                                input()  # Fallback
+                            
                             tweet = "here's my cursor 2025 wrapped:\n\ngithub.com/riyapatel25/cursorWrapped"
                             open_twitter_compose(tweet)
                     finally:
