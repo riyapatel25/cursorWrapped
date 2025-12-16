@@ -1146,17 +1146,17 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         
         # Apollo 11 comparison if > 145,000 lines
         APOLLO_11_LINES = 145000
-        if lines_written > APOLLO_11_LINES:
-            times_more = lines_written / APOLLO_11_LINES
-            apollo_msg = f"That's {times_more:.1f}x more code than Apollo 11's guidance system! 🚀"
-            print(f"    ", end="")
-            for char in apollo_msg:
-                color = YELLOW if char.isdigit() or char == '.' or char == 'x' else DIM
-                sys.stdout.write(f"{color}{char}{RESET}")
-                sys.stdout.flush()
-                time.sleep(0.012)
-            print()
-            time.sleep(0.3)
+
+        times_more = lines_written / APOLLO_11_LINES
+        apollo_msg = f"That's {times_more:.1f}x more code than Apollo 11's guidance system! 🚀"
+        print(f"    ", end="")
+        for char in apollo_msg:
+            color = YELLOW if char.isdigit() or char == '.' or char == 'x' else DIM
+            sys.stdout.write(f"{color}{char}{RESET}")
+            sys.stdout.flush()
+            time.sleep(0.012)
+        print()
+        time.sleep(0.3)
         
         print()
         

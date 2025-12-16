@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cursor-wrapped"
-version = "1.0.3"
+version = "1.0.4"
 description = "Your Cursor IDE year in review - see your AI coding stats for 2025"
 readme = "README.md"
 license = "MIT"
