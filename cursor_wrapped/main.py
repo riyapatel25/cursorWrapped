@@ -425,10 +425,11 @@ def analyze_token_usage(events):
         token_usage = event.get('tokenUsage', {})
         model = event.get('model', 'unknown')
         
-        input_tokens = token_usage.get('inputTokens', 0)
-        output_tokens = token_usage.get('outputTokens', 0)
-        cache_write = token_usage.get('cacheWriteTokens', 0)
-        cache_read = token_usage.get('cacheReadTokens', 0)
+        # API returns values in thousands, multiply by 1000 to get actual count
+        input_tokens = token_usage.get('inputTokens', 0) * 1000
+        output_tokens = token_usage.get('outputTokens', 0) * 1000
+        cache_write = token_usage.get('cacheWriteTokens', 0) * 1000
+        cache_read = token_usage.get('cacheReadTokens', 0) * 1000
         cost_cents = token_usage.get('totalCents', 0)
         
         stats['total_input_tokens'] += input_tokens
@@ -1148,7 +1149,7 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         APOLLO_11_LINES = 145000
 
         times_more = lines_written / APOLLO_11_LINES
-        apollo_msg = f"That's {times_more:.1f}x more code than Apollo 11's guidance system! 🚀"
+        apollo_msg = f"That's {times_more:.1f}x the amount of code written in Apollo 11's moon mission! 🚀"
         print(f"    ", end="")
         for char in apollo_msg:
             color = YELLOW if char.isdigit() or char == '.' or char == 'x' else DIM
@@ -1334,6 +1335,11 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
     tab_rate = (tab_accepted / tab_shown * 100) if tab_shown > 0 else 0
     tab_val = f"{tab_accepted:,} ({tab_rate:.0f}%)"
     
+    # Apollo missions calculation
+    APOLLO_11_LINES = 145000
+    apollo_missions = stats['accepted_lines_added'] / APOLLO_11_LINES
+    apollo_val = f"{apollo_missions:.1f}x 🚀"
+    
     # Sleek summary card with animation
     W = 52  # inner width (must be even for centering)
     
@@ -1381,6 +1387,7 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
     animate_line(make_stat_row("Tabs Accepted", tab_val), 0.05)
     animate_line(make_stat_row("Active Days", active_val), 0.05)
     animate_line(make_stat_row("Longest Streak", streak_val), 0.05)
+    animate_line(make_stat_row("Moon Missions", apollo_val), 0.05)
     
     animate_line(f"  {CYAN}│{' ' * W}│{RESET}", 0.02)
     animate_line(f"  {CYAN}├{'─' * W}┤{RESET}", 0.03)
@@ -1592,7 +1599,7 @@ def generate_terminal_image(wrapped_data):
     current_y = card_y + 28
     
     # Title section
-    title_text = "CURSOR WRAPPED 2025"
+    title_text = " uvx cursor-wrapped"
     title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
     title_w = title_bbox[2] - title_bbox[0]
     draw.text(((img_width - title_w) // 2, current_y), title_text, fill=gold_accent, font=title_font)
@@ -1603,6 +1610,11 @@ def generate_terminal_image(wrapped_data):
     current_y += section_spacing
     
     # === STATS SECTION ===
+    # Apollo missions calculation
+    APOLLO_11_LINES = 145000
+    apollo_missions = stats['accepted_lines_added'] / APOLLO_11_LINES
+    apollo_val = f"{apollo_missions:.1f}x Apollo 11"
+    
     stats_data = [
         ("Lines Accepted", f"{stats['accepted_lines_added']:,}"),
         ("Agent Requests", f"{stats['total_agent_requests']:,}"),
@@ -1610,6 +1622,7 @@ def generate_terminal_image(wrapped_data):
         ("Tabs Accepted", tabs_val),
         ("Active Days", f"{stats['active_days']} / {total_days}"),
         ("Longest Streak", f"{stats['streak_longest']} days"),
+        ("Moon Missions", apollo_val),
     ]
     
     def draw_stat_row(y, label, value, highlight=False):
@@ -1720,6 +1733,10 @@ def generate_ascii_card(wrapped_data):
     tab_rate = (tab_accepted / tab_shown * 100) if tab_shown > 0 else 0
     tabs_val = f"{tab_accepted:,} ({tab_rate:.0f}%)"
     
+    # Apollo missions calculation
+    APOLLO_11_LINES = 145000
+    apollo_missions = stats['accepted_lines_added'] / APOLLO_11_LINES
+    
     # Pre-format values - all padded to exactly 15 chars
     lines_val = f"{stats['accepted_lines_added']:,}".rjust(15)
     requests_val = f"{stats['total_agent_requests']:,}".rjust(15)
@@ -1727,6 +1744,7 @@ def generate_ascii_card(wrapped_data):
     tabs_formatted = tabs_val.rjust(15)
     active_val = f"{stats['active_days']} / {total_days}".rjust(15)
     streak_val = f"{stats['streak_longest']} days".rjust(15)
+    apollo_val = f"{apollo_missions:.1f}x Apollo 11".rjust(15)
     top_model_val = top_model.rjust(18)
     power_day_val = power_day.rjust(18)
     
@@ -1746,6 +1764,7 @@ def generate_ascii_card(wrapped_data):
     lines.append("║" + f"  Tabs Accepted      {tabs_formatted}      ".ljust(W) + "║")
     lines.append("║" + f"  Active Days        {active_val}      ".ljust(W) + "║")
     lines.append("║" + f"  Longest Streak     {streak_val}      ".ljust(W) + "║")
+    lines.append("║" + f"  Moon Missions      {apollo_val}      ".ljust(W) + "║")
     lines.append("║" + " " * W + "║")
     lines.append("╠" + "═" * W + "╣")
     lines.append("║" + " " * W + "║")

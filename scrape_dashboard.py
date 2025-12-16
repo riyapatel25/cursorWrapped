@@ -425,10 +425,11 @@ def analyze_token_usage(events):
         token_usage = event.get('tokenUsage', {})
         model = event.get('model', 'unknown')
         
-        input_tokens = token_usage.get('inputTokens', 0)
-        output_tokens = token_usage.get('outputTokens', 0)
-        cache_write = token_usage.get('cacheWriteTokens', 0)
-        cache_read = token_usage.get('cacheReadTokens', 0)
+        # API returns values in thousands, multiply by 1000 to get actual count
+        input_tokens = token_usage.get('inputTokens', 0) * 1000
+        output_tokens = token_usage.get('outputTokens', 0) * 1000
+        cache_write = token_usage.get('cacheWriteTokens', 0) * 1000
+        cache_read = token_usage.get('cacheReadTokens', 0) * 1000
         cost_cents = token_usage.get('totalCents', 0)
         
         stats['total_input_tokens'] += input_tokens
@@ -1148,7 +1149,7 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         APOLLO_11_LINES = 145000
 
         times_more = lines_written / APOLLO_11_LINES
-        apollo_msg = f"That's {times_more:.1f}x more code than Apollo 11's guidance system! 🚀"
+        apollo_msg = f"That's {times_more:.1f}x the amount of code written in Apollo 11's moon mission! 🚀"
         print(f"    ", end="")
         for char in apollo_msg:
             color = YELLOW if char.isdigit() or char == '.' or char == 'x' else DIM
@@ -1592,7 +1593,7 @@ def generate_terminal_image(wrapped_data):
     current_y = card_y + 28
     
     # Title section
-    title_text = "CURSOR WRAPPED 2025"
+    title_text = " uvx cursor-wrapped"
     title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
     title_w = title_bbox[2] - title_bbox[0]
     draw.text(((img_width - title_w) // 2, current_y), title_text, fill=gold_accent, font=title_font)
