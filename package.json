@@ -1,0 +1,37 @@
+{
+  "name": "cursor-wrapped",
+  "version": "1.1.0",
+  "description": "Your Cursor IDE year in review - see your AI coding stats for 2025",
+  "bin": {
+    "cursor-wrapped": "./bin/cli.js"
+  },
+  "files": [
+    "bin/"
+  ],
+  "scripts": {
+    "start": "node bin/cli.js"
+  },
+  "keywords": [
+    "cursor",
+    "wrapped",
+    "ai",
+    "coding",
+    "stats",
+    "analytics",
+    "year-in-review"
+  ],
+  "author": "riyapatel25",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/riyapatel25/cursorWrapped"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1"
+  }
+}
