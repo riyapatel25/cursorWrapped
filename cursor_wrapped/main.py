@@ -381,7 +381,7 @@ def fetch_token_usage(auth_cookie):
             "startDate": start_ts,
             "endDate": end_ts,
             "page": page,
-            "pageSize": 100
+            "pageSize": 500
         }
         
         try:
@@ -411,7 +411,7 @@ def fetch_token_usage(auth_cookie):
                 print(f"\r   Loading... {len(all_events)} events", end='', flush=True)
             
             # Only stop if we get fewer than pageSize events (last page)
-            if len(events) < 100:
+            if len(events) < 500:
                 break
             
             page += 1
@@ -431,10 +431,7 @@ def analyze_token_usage(events):
     """Analyze token usage from events."""
     
     if not events:
-        print("No events to analyze")
         return None
-    
-    print(f"   Analyzing {len(events)} token events...")
     
     stats = {
         'total_input_tokens': 0,
@@ -469,10 +466,6 @@ def analyze_token_usage(events):
         stats['model_tokens'][model]['output'] += output_tokens
         stats['model_tokens'][model]['cache_write'] += cache_write
         stats['model_tokens'][model]['cache_read'] += cache_read
-    
-    # Debug: show aggregated totals
-    total_all = stats['total_input_tokens'] + stats['total_output_tokens'] + stats['total_cache_write'] + stats['total_cache_read']
-    print(f"   Aggregated: {total_all:,} total tokens (${stats['total_cost_cents']/100:.2f})")
     
     return stats
 

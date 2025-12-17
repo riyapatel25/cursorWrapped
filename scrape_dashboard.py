@@ -411,7 +411,7 @@ def fetch_token_usage(auth_cookie):
                 print(f"\r   Loading... {len(all_events)} events", end='', flush=True)
             
             # Only stop if we get fewer than pageSize events (last page)
-            if len(events) < 100:
+            if len(events) < 500:
                 break
             
             page += 1
@@ -467,7 +467,6 @@ def analyze_token_usage(events):
         stats['model_tokens'][model]['cache_write'] += cache_write
         stats['model_tokens'][model]['cache_read'] += cache_read
     
-    total_all = stats['total_input_tokens'] + stats['total_output_tokens'] + stats['total_cache_write'] + stats['total_cache_read']
     return stats
 
 
@@ -1288,7 +1287,6 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
 
         total_tokens = (token_stats['total_input_tokens'] + token_stats['total_output_tokens'] + 
                        token_stats['total_cache_read'] + token_stats['total_cache_write'])
-        print(f"  CALCULATED total_tokens: {total_tokens:,}")
         cache_total = token_stats['total_cache_read'] + token_stats['total_cache_write']
         cache_hit_rate = (token_stats['total_cache_read'] / cache_total * 100) if cache_total > 0 else 0
         cost_dollars = token_stats['total_cost_cents'] / 100
