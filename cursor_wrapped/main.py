@@ -522,9 +522,9 @@ def analyze_yearly_data(data):
     june_cutoff = datetime(2025, 6, 1)
     
     for day in metrics:
-        # Parse date
+        # Parse date (use UTC to avoid timezone offset issues)
         date_ts = int(day.get('date', 0)) / 1000
-        date_obj = datetime.fromtimestamp(date_ts)
+        date_obj = datetime.utcfromtimestamp(date_ts)
         
         # Skip data before June 2025
         if date_obj < june_cutoff:
@@ -535,11 +535,15 @@ def analyze_yearly_data(data):
         
         # Check if this was an active day
         lines_added = day.get('linesAdded', 0)
+        lines_deleted = day.get('linesDeleted', 0)
+        total_lines = lines_added + lines_deleted  # Total lines worked on
         agent_requests = day.get('agentRequests', 0)
         tabs_shown = day.get('totalTabsShown', 0)
-        accepted_lines = day.get('acceptedLinesAdded', 0)
+        accepted_lines_added = day.get('acceptedLinesAdded', 0)
+        accepted_lines_deleted = day.get('acceptedLinesDeleted', 0)
+        accepted_lines = accepted_lines_added + accepted_lines_deleted  # Total accepted lines
         
-        has_activity = lines_added > 0 or agent_requests > 0 or tabs_shown > 0
+        has_activity = total_lines > 0 or agent_requests > 0 or tabs_shown > 0
         
         if has_activity:
             stats['active_days'] += 1
@@ -558,7 +562,7 @@ def analyze_yearly_data(data):
             last_active_date = date_obj.date()
             
             # Update monthly stats
-            stats['monthly_stats'][month_key]['lines_added'] += lines_added
+            stats['monthly_stats'][month_key]['lines_added'] += total_lines
             stats['monthly_stats'][month_key]['accepted_lines'] += accepted_lines
             stats['monthly_stats'][month_key]['agent_requests'] += agent_requests
             stats['monthly_stats'][month_key]['active_days'] += 1
@@ -566,7 +570,7 @@ def analyze_yearly_data(data):
             stats['monthly_stats'][month_key]['tabs_accepted'] += day.get('totalTabsAccepted', 0)
             
             # Day of week stats
-            stats['day_of_week_stats'][day_of_week]['lines'] += lines_added
+            stats['day_of_week_stats'][day_of_week]['lines'] += total_lines
             stats['day_of_week_stats'][day_of_week]['requests'] += agent_requests
             stats['day_of_week_stats'][day_of_week]['count'] += 1
             
@@ -575,30 +579,30 @@ def analyze_yearly_data(data):
                 stats['busiest_day'] = {
                     'date': date_obj.strftime('%B %d, %Y'),
                     'requests': agent_requests,
-                    'lines': lines_added
+                    'lines': total_lines
                 }
             
-            # Track best coding day (most lines added)
-            if not stats['best_coding_day'] or lines_added > stats['best_coding_day']['lines']:
+            # Track best coding day (most total lines)
+            if not stats['best_coding_day'] or total_lines > stats['best_coding_day']['lines']:
                 stats['best_coding_day'] = {
                     'date': date_obj.strftime('%B %d, %Y'),
-                    'lines': lines_added,
+                    'lines': total_lines,
                     'accepted': accepted_lines
                 }
             
             # Track most productive day (same as best_coding_day but with date object)
-            if not stats['most_productive_day'] or lines_added > stats['most_productive_day']['lines']:
+            if not stats['most_productive_day'] or total_lines > stats['most_productive_day']['lines']:
                 stats['most_productive_day'] = {
                     'date': date_obj,
-                    'lines': lines_added,
+                    'lines': total_lines,
                     'accepted': accepted_lines
                 }
         
         # Sum up metrics
         stats['total_lines_added'] += lines_added
-        stats['total_lines_deleted'] += day.get('linesDeleted', 0)
-        stats['accepted_lines_added'] += accepted_lines
-        stats['accepted_lines_deleted'] += day.get('acceptedLinesDeleted', 0)
+        stats['total_lines_deleted'] += lines_deleted
+        stats['accepted_lines_added'] += accepted_lines_added
+        stats['accepted_lines_deleted'] += accepted_lines_deleted
         stats['total_applies'] += day.get('totalApplies', 0)
         stats['total_accepts'] += day.get('totalAccepts', 0)
         stats['total_rejects'] += day.get('totalRejects', 0)
@@ -987,8 +991,9 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
     
     # Lines of Code + Agent Requests - SIDE BY SIDE
     time.sleep(0.5)
+    total_accepted = stats['accepted_lines_added'] + stats['accepted_lines_deleted']
     reveal_numbers_side_by_side(
-        "Lines of AI Code Accepted", stats['accepted_lines_added'],
+        "Lines of AI Code Accepted", total_accepted,
         "Agent Requests Made", stats['total_agent_requests'],
         CYAN, MAGENTA
     )
@@ -1152,7 +1157,7 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         time.sleep(0.3)
         
         # Special reveal: "You and X model wrote X lines of code together"
-        lines_written = stats['accepted_lines_added']
+        lines_written = stats['accepted_lines_added'] + stats['accepted_lines_deleted']
         
         print(f"    ", end="")
         msg_parts = [
@@ -1350,8 +1355,9 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
                     token_stats.get('total_cache_read', 0) + token_stats.get('total_cache_write', 0))
         total_tokens_val = format_large_number(total_tok, " tokens")
     
-    # Pre-format all values
-    lines_val = f"{stats['accepted_lines_added']:,}"
+    # Pre-format all values (total lines = added + deleted)
+    total_accepted_lines = stats['accepted_lines_added'] + stats['accepted_lines_deleted']
+    lines_val = f"{total_accepted_lines:,}"
     requests_val = f"{stats['total_agent_requests']:,}"
     active_val = f"{stats['active_days']} / {total_days_in_period}"
     streak_val = f"{stats['streak_longest']} days"
@@ -1633,8 +1639,9 @@ def generate_terminal_image(wrapped_data):
     current_y += section_spacing
     
     # === STATS SECTION ===
+    total_accepted_lines = stats['accepted_lines_added'] + stats['accepted_lines_deleted']
     stats_data = [
-        ("Lines Accepted", f"{stats['accepted_lines_added']:,}"),
+        ("Lines Accepted", f"{total_accepted_lines:,}"),
         ("Agent Requests", f"{stats['total_agent_requests']:,}"),
         ("Total Tokens", total_tokens),
         ("Tabs Accepted", tabs_val),
@@ -1751,8 +1758,9 @@ def generate_ascii_card(wrapped_data):
     tab_rate = (tab_accepted / tab_shown * 100) if tab_shown > 0 else 0
     tabs_val = f"{tab_accepted:,} ({tab_rate:.0f}%)"
     
-    # Pre-format values - all padded to exactly 15 chars
-    lines_val = f"{stats['accepted_lines_added']:,}".rjust(15)
+    # Pre-format values - all padded to exactly 15 chars (total lines = added + deleted)
+    total_accepted_lines = stats['accepted_lines_added'] + stats['accepted_lines_deleted']
+    lines_val = f"{total_accepted_lines:,}".rjust(15)
     requests_val = f"{stats['total_agent_requests']:,}".rjust(15)
     tokens_val = total_tokens.rjust(15)
     tabs_formatted = tabs_val.rjust(15)
@@ -1801,9 +1809,10 @@ def generate_tweet(wrapped_data):
     acceptance_rate = wrapped_data['acceptance_rate']
     
     # Keep it concise for Twitter
+    total_lines = stats['accepted_lines_added'] + stats['accepted_lines_deleted']
     tweet = f"""My Cursor Wrapped 2025 🚀
 
-{stats['accepted_lines_added']:,} lines of AI code
+{total_lines:,} lines of AI code
 {stats['total_agent_requests']:,} agent requests  
 {stats['streak_longest']} day streak
 {int(acceptance_rate)}% acceptance rate
