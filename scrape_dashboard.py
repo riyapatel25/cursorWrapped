@@ -349,9 +349,9 @@ def fetch_token_usage(auth_cookie):
     
     print("Fetching token usage data...")
     
-    # Same date range
-    end_ts = "1765871999999"
+    # Date range: Jan 1, 2025 to Dec 15, 2025
     start_ts = "1735718400000"
+    end_ts = "1765871999999"
     
     url = "https://cursor.com/api/dashboard/get-filtered-usage-events"
     
@@ -369,15 +369,19 @@ def fetch_token_usage(auth_cookie):
     
     all_events = []
     page = 1
+    total_count = None
     
-    # Fetch multiple pages
-    while page <= 10:
+    # Loading bar characters
+    bar_width = 30
+    
+    # Fetch ALL pages - keep going until we get an empty page
+    while True:
         payload = {
             "teamId": 0,
             "startDate": start_ts,
             "endDate": end_ts,
             "page": page,
-            "pageSize": 100
+            "pageSize": 500
         }
         
         try:
@@ -385,22 +389,41 @@ def fetch_token_usage(auth_cookie):
             response.raise_for_status()
             data = response.json()
             
+            # Get total count from first page
+            if total_count is None:
+                total_count = data.get('totalUsageEventsCount', 0)
+            
             events = data.get('usageEventsDisplay', [])
+            
+            # Stop if no events returned
             if not events:
                 break
             
             all_events.extend(events)
             
+            # Update loading bar
+            if total_count > 0:
+                progress = min(len(all_events) / total_count, 1.0)
+                filled = int(bar_width * progress)
+                bar = '█' * filled + '░' * (bar_width - filled)
+                print(f"\r   [{bar}] {len(all_events)}/{total_count} events", end='', flush=True)
+            else:
+                print(f"\r   Loading... {len(all_events)} events", end='', flush=True)
+            
+            # Only stop if we get fewer than pageSize events (last page)
             if len(events) < 100:
                 break
             
             page += 1
             
-        except Exception as e:
-            print(f"   Error on page {page}: {e}")
+        except requests.exceptions.HTTPError:
+            break
+        except Exception:
             break
     
-    print(f"   Got {len(all_events)} usage events")
+    # Clear the loading bar line and print final result
+    print(f"\r   Fetched {len(all_events)} token usage events" + " " * 20)
+    
     return all_events
 
 
@@ -409,7 +432,7 @@ def analyze_token_usage(events):
     
     if not events:
         return None
-    
+        
     stats = {
         'total_input_tokens': 0,
         'total_output_tokens': 0,
@@ -444,6 +467,7 @@ def analyze_token_usage(events):
         stats['model_tokens'][model]['cache_write'] += cache_write
         stats['model_tokens'][model]['cache_read'] += cache_read
     
+    total_all = stats['total_input_tokens'] + stats['total_output_tokens'] + stats['total_cache_write'] + stats['total_cache_read']
     return stats
 
 
@@ -1261,8 +1285,10 @@ def print_wrapped_stats(stats, raw_data, token_stats=None):
         time.sleep(0.25)
         
         # Total tokens includes input + output + cache (matches Cursor dashboard)
+
         total_tokens = (token_stats['total_input_tokens'] + token_stats['total_output_tokens'] + 
                        token_stats['total_cache_read'] + token_stats['total_cache_write'])
+        print(f"  CALCULATED total_tokens: {total_tokens:,}")
         cache_total = token_stats['total_cache_read'] + token_stats['total_cache_write']
         cache_hit_rate = (token_stats['total_cache_read'] / cache_total * 100) if cache_total > 0 else 0
         cost_dollars = token_stats['total_cost_cents'] / 100
